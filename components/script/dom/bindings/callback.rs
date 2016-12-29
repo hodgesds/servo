@@ -7,6 +7,7 @@
 use dom::bindings::error::{Error, Fallible, report_pending_exception};
 use dom::bindings::js::Root;
 use dom::bindings::reflector::DomObject;
+use dom::bindings::settings_stack::AutoEntryScript;
 use dom::globalscope::GlobalScope;
 use js::jsapi::{Heap, MutableHandleObject};
 use js::jsapi::{IsCallable, JSContext, JSObject, JS_WrapObject};
@@ -156,6 +157,9 @@ pub struct CallSetup {
     old_compartment: *mut JSCompartment,
     /// The exception handling used for the call.
     handling: ExceptionHandling,
+    /// https://heycam.github.io/webidl/#es-invoking-callback-functions
+    /// steps 8 and 18.2.
+    _entry_script: AutoEntryScript,
 }
 
 impl CallSetup {
@@ -167,11 +171,13 @@ impl CallSetup {
         let global = unsafe { GlobalScope::from_object(callback.callback()) };
         let cx = global.get_cx();
 
+        let aes = AutoEntryScript::new(&global);
         CallSetup {
             exception_global: global,
             cx: cx,
             old_compartment: unsafe { JS_EnterCompartment(cx, callback.callback()) },
             handling: handling,
+            _entry_script: aes,
         }
     }
 
